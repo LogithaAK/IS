@@ -1,93 +1,54 @@
-import streamlit as st
+from flask import Flask, render_template, request, redirect, url_for
+from cryptography.fernet import Fernet
+import os
 
-# -------------------- CIPHER FUNCTIONS --------------------
-def rail_fence_encrypt(message):
-    message = message.replace(" ", "")
-    rail1 = []
-    rail2 = []
-    for i in range(len(message)):
-        if i % 2 == 0:
-            rail1.append(message[i])
+app = Flask(__name__)
+messages = []
+shift_value = 3  # Default Caesar cipher shift
+
+# Load or generate Fernet key
+if not os.path.exists("secret.key"):
+    key = Fernet.generate_key()
+    with open("secret.key", "wb") as key_file:
+        key_file.write(key)
+else:
+    with open("secret.key", "rb") as key_file:
+        key = key_file.read()
+
+cipher = Fernet(key)
+
+# Caesar Cipher functions
+def caesar_encrypt(text, shift):
+    result = ""
+    for char in text:
+        if char.isalpha():
+            offset = 65 if char.isupper() else 97
+            result += chr((ord(char) + shift - offset) % 26 + offset)
         else:
-            rail2.append(message[i])
-    return ''.join(rail1 + rail2)
+            result += char
+    return result
 
-def row_transposition_encrypt(message, key_input):
-    message = message.replace(" ", "")
-    key = [int(k) for k in key_input]
-    rows = len(key)
-    cols = (len(message) + rows - 1) // rows
-    grid = [['' for _ in range(cols)] for _ in range(rows)]
-    i = 0
-    for r in range(rows):
-        for c in range(cols):
-            if i < len(message):
-                grid[r][c] = message[i]
-                i += 1
-    key_order = sorted(list(enumerate(key)), key=lambda x: x[1])
-    encrypted = ''
-    for idx, _ in key_order:
-        for ch in grid[idx]:
-            if ch:
-                encrypted += ch
-    return encrypted
+def caesar_decrypt(text, shift):
+    return caesar_encrypt(text, -shift)
 
-# -------------------- PAGE STYLE --------------------
-page_bg = """
-<style>
-[data-testid="stAppViewContainer"] {
-    background: linear-gradient(135deg, #e1f5fe, #e8f5e9);
-}
-.title {
-    font-size: 42px;
-    color: #004d40;
-    font-weight: bold;
-}
-.result-box {
-    background-color: #ffffff;
-    padding: 1em;
-    border-radius: 10px;
-    margin-top: 10px;
-    border-left: 5px solid #00796b;
-    font-size: 18px;
-}
-</style>
-"""
-st.markdown(page_bg, unsafe_allow_html=True)
+@app.route("/", methods=["GET", "POST"])
+def index():
+    global shift_value
+    if request.method == "POST":
+        shift_value = int(request.form.get("shift", 3))
+        message = request.form.get("message")
+        encrypted_caesar = caesar_encrypt(message, shift_value)
+        encrypted_message = cipher.encrypt(encrypted_caesar.encode()).decode()
+        messages.append(encrypted_message)
+        return redirect(url_for('index'))
 
-# -------------------- UI TITLE --------------------
-st.markdown('<div class="title">🔐 Cipher Encryptor</div>', unsafe_allow_html=True)
-st.write("Encrypt your messages using classic cipher techniques in a stylish UI.")
+    decrypted_messages = []
+    for m in messages:
+        decrypted_text = cipher.decrypt(m.encode()).decode()
+        original_text = caesar_decrypt(decrypted_text, shift_value)
+        decrypted_messages.append((original_text, decrypted_text, m))
 
-# -------------------- INPUT FORM --------------------
-with st.form("cipher_form"):
-    message = st.text_input("✍️ Enter your message to encrypt:")
-    cipher_type = st.radio("🔧 Choose cipher type:", ["Rail Fence Cipher", "Row Transposition Cipher"])
+    return render_template("index.html", messages=decrypted_messages, shift=shift_value)
 
-    key_input = ""
-    if cipher_type == "Row Transposition Cipher":
-        key_input = st.text_input("🔢 Enter numeric key (e.g., 431256):")
-
-    submitted = st.form_submit_button("🚀 Encrypt")
-
-# -------------------- ENCRYPTION LOGIC --------------------
-if submitted:
-    if not message.strip():
-        st.error("⚠️ Please enter a message.")
-
-    elif cipher_type == "Rail Fence Cipher":
-        cipher = rail_fence_encrypt(message)
-        with st.expander("📦 Encrypted Output"):
-            st.markdown(f'<div class="result-box">🔐 <b>Encrypted (Rail Fence):</b><br>{cipher}</div>', unsafe_allow_html=True)
-
-    elif cipher_type == "Row Transposition Cipher":
-        if not key_input.strip().isdigit():
-            st.error("❌ Key must contain only digits like 431256.")
-        else:
-            cipher = row_transposition_encrypt(message, key_input)
-            with st.expander("📦 Encrypted Output"):
-                st.markdown(f'<div class="result-box">🔐 <b>Encrypted (Row Transposition):</b><br>{cipher}</div>', unsafe_allow_html=True)
-
-# -------------------- FOOTER --------------------
-st.markdown("---")
-
+if __name__ == "__main__":
+    app.run(debug=True)

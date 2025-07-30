@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Secure Messaging App</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body {
+            background-color: #121212;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        h2, h4 {
+            color: #00bcd4; /* Dark cyan-blue for headings */
+        }
+
+        .form-label {
+            color: #b0bec5; /* Muted light grey-blue */
+        }
+
+        .original-text {
+            color: #f8f9fa; /* Very light gray (near-white) */
+            font-weight: bold;
+            text-shadow: 0 0 4px rgba(255, 255, 255, 0.3);
+        }
+
+        .caesar-text {
+            color: #a5f3fc; /* Soft cyan */
+            font-weight: 500;
+            text-shadow: 0 0 4px rgba(0, 255, 255, 0.3);
+        }
+
+        .fernet-text {
+            color: #f48fb1; /* Light pink */
+            font-weight: 500;
+            word-wrap: break-word;
+            text-shadow: 0 0 4px rgba(255, 105, 180, 0.3);
+        }
+
+        .card-custom {
+            background: linear-gradient(145deg, #2a2a2a, #1e1e1e);
+            border-left: 6px solid #00bcd4;
+            border-radius: 12px;
+            box-shadow: 0 0 12px rgba(0, 255, 255, 0.1);
+        }
+
+        .btn-primary {
+            background-color: #00bcd4;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background-color: #0097a7;
+        }
+    </style>
+</head>
+<body>
+<div class="container mt-5">
+    <h2 class="text-center mb-4">🔐 Secure Messaging with Caesar + Fernet</h2>
+
+    <form method="POST" class="mb-4">
+        <div class="mb-3">
+            <label for="message" class="form-label">Enter Message</label>
+            <input type="text" name="message" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label for="shift" class="form-label">Caesar Shift (0–25)</label>
+            <input type="number" name="shift" class="form-control" value="{{ shift }}" min="0" max="25" required>
+        </div>
+        <button class="btn btn-primary">Send</button>
+    </form>
+
+    <h4 class="mb-3">🔓 Decrypted Messages</h4>
+    {% for plain, caesar, encrypted in messages %}
+    <div class="card card-custom mb-3 p-3">
+        <div class="card-body">
+            <p><strong class="text-secondary">🔸 Original:</strong> <span class="original-text">{{ plain }}</span></p>
+            <p><strong class="text-secondary">🔹 Caesar Encrypted:</strong> <span class="caesar-text">{{ caesar }}</span></p>
+            <p><strong class="text-secondary">🔺 Fernet Encrypted:</strong> <span class="fernet-text small">{{ encrypted }}</span></p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+</body>
+</html>
